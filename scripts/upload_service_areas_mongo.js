@@ -7,8 +7,8 @@ const { MongoClient } = require("mongodb");
 // const ServiceArea = require('./models/serviceAreaModel');
 
 // --- Connection Details ---
-const mongoUrl = "mongodb://localhost:27017/plan_db"; // <-- IMPORTANT: Update this
-const dbName = "plan_db"; // <-- IMPORTANT: Update this
+const mongoUrl = "mongodb://localhost:27017/"; // <-- IMPORTANT: Update this
+const dbName = "ichra-local"
 const collectionName = "serviceareas";
 
 // --- File Paths ---
@@ -37,9 +37,14 @@ async function uploadServiceAreas() {
       .pipe(csv())
       .on("data", (row) => {
         // Map the CSV row to the ServiceArea model structure
+        Object.keys(row).forEach((key) => {
+          if (typeof row[key] === "string") {
+            row[key] = row[key].trim();
+          }
+        });
         const serviceArea = {
           service_area_id: row.id, // Use the CSV 'id' as the MongoDB '_id'
-          issuer_id: row.issuer_id,
+          issuer_id: row.issuer_id
         };
         areasToInsert.push(serviceArea);
       })

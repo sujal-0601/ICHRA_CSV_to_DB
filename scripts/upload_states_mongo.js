@@ -9,12 +9,12 @@ const { MongoClient } = require("mongodb");
 // const State = require('./models/stateModel');
 
 // --- Connection Details ---
-const mongoUrl = "mongodb://localhost:27017/your_database_name"; // <-- IMPORTANT: Update this
-const dbName = "your_database_name"; // <-- IMPORTANT: Update this
+const mongoUrl = "mongodb://localhost:27017/"; // <-- IMPORTANT: Update this
+const dbName = "ichra-local"
 const collectionName = "states";
 
 // --- File Paths ---
-const csvPath = path.resolve(__dirname, "counties.csv");
+const csvPath = path.resolve(__dirname, "../csv_files/counties.csv");
 
 // A simple map to convert state abbreviations to full names.
 // You can expand this list if your data includes more states.
@@ -41,6 +41,11 @@ async function uploadStates() {
     fs.createReadStream(csvPath)
       .pipe(csv())
       .on("data", (row) => {
+        Object.keys(row).forEach((key) => {
+          if (typeof row[key] === "string") {
+            row[key] = row[key].trim();
+          }
+        });
         if (row.state_id) {
           uniqueStateIds.add(row.state_id);
         }

@@ -9,12 +9,12 @@ const { MongoClient } = require("mongodb");
 // const ZipLocation = require('./models/zipLocationModel');
 
 // --- Connection Details ---
-const mongoUrl = "mongodb://localhost:27017/your_database_name"; // <-- IMPORTANT: Update this
-const dbName = "your_database_name"; // <-- IMPORTANT: Update this
+const mongoUrl = "mongodb://localhost:27017/"; // <-- IMPORTANT: Update this
+const dbName = "ichra-local"; // <-- IMPORTANT: Update this
 const collectionName = "ziplocations";
 
 // --- File Paths ---
-const csvPath = path.resolve(__dirname, "zip_counties.csv");
+const csvPath = path.resolve(__dirname, "../csv_files/zip_counties.csv");
 
 async function uploadZipLocations() {
   const client = new MongoClient(mongoUrl, {
@@ -38,11 +38,14 @@ async function uploadZipLocations() {
       .pipe(csv())
       .on("data", (row) => {
         // Map CSV row to the ZipLocation model structure
+        Object.keys(row).forEach((key) => {
+          if (typeof row[key] === "string") {
+            row[key] = row[key].trim();
+          }
+        });
         const zipLocation = {
-          _id: parseInt(row.id, 10), // Use CSV id as MongoDB _id
-          rating_area_id: row.rating_area_id,
-          county_id: parseInt(row.county_id, 10),
-          zip_code_id: parseInt(row.zip_code_id, 10),
+          county_id:row.county_id,
+          zip_code: row.zip_code_id,
         };
         locationsToInsert.push(zipLocation);
       })
