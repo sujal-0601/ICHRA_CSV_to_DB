@@ -36,7 +36,7 @@ async function uploadPlanCounties() {
       .on("data", (row) => {
         const planCounty = {
           plan_id: row.plan_id,
-          county_id: parseInt(row.county_id, 10),
+          county_id: row.county_id,
         };
         dataToInsert.push(planCounty);
       })

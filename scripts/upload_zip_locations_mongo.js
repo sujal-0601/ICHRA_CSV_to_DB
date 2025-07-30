@@ -9,8 +9,8 @@ const { MongoClient } = require("mongodb");
 // const ZipLocation = require('./models/zipLocationModel');
 
 // --- Connection Details ---
-const mongoUrl = "mongodb://localhost:27017/"; // <-- IMPORTANT: Update this
-const dbName = "ichra-local"; // <-- IMPORTANT: Update this
+const mongoUrl = "mongodb://localhost:27017/plan_db"; // <-- IMPORTANT: Update this
+const dbName = "plan_db"; // <-- IMPORTANT: Update this
 const collectionName = "ziplocations";
 
 // --- File Paths ---
@@ -44,8 +44,9 @@ async function uploadZipLocations() {
           }
         });
         const zipLocation = {
-          county_id:row.county_id,
+          county_id: row.county_id,
           zip_code: row.zip_code_id,
+          rating_area_id: row.rating_area_id,
         };
         locationsToInsert.push(zipLocation);
       })

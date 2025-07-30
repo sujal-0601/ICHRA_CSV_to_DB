@@ -7,7 +7,7 @@ const { MongoClient } = require("mongodb");
 
 // --- Connection Details ---
 const mongoUrl = "mongodb://localhost:27017/"; // <-- IMPORTANT: Update this
-const dbName = "ichra-local"; // <-- IMPORTANT: Update this
+const dbName = "plan_db"; // <-- IMPORTANT: Update this
 const collectionName = "plans";
 
 // --- File Paths ---
@@ -60,7 +60,6 @@ async function uploadPlans() {
           hsa_eligible: toBoolean(row.hsa_eligible),
           effective_date: new Date(row.effective_date),
           expiration_date: new Date(row.expiration_date),
-          
         };
         plansToInsert.push(plan);
       })

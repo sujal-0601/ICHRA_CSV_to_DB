@@ -1,4 +1,5 @@
 // upload_service_areas_mongo.js
+const fs = require("fs");
 const path = require("path");
 const csv = require("csv-parser");
 const { MongoClient } = require("mongodb");
@@ -8,7 +9,7 @@ const { MongoClient } = require("mongodb");
 
 // --- Connection Details ---
 const mongoUrl = "mongodb://localhost:27017/"; // <-- IMPORTANT: Update this
-const dbName = "ichra-local"
+const dbName = "plan_db";
 const collectionName = "serviceareas";
 
 // --- File Paths ---
@@ -44,7 +45,7 @@ async function uploadServiceAreas() {
         });
         const serviceArea = {
           service_area_id: row.id, // Use the CSV 'id' as the MongoDB '_id'
-          issuer_id: row.issuer_id
+          issuer_id: row.issuer_id,
         };
         areasToInsert.push(serviceArea);
       })

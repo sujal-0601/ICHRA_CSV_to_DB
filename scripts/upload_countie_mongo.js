@@ -4,12 +4,10 @@ const fs = require("fs");
 const path = require("path");
 const csv = require("csv-parser");
 const { MongoClient } = require("mongodb");
-// The County model is not strictly required for this script to run, but we are using its structure as a reference.
-// const County = require('./models/countyModel');
 
 // --- Connection Details ---
-const mongoUrl = "mongodb://localhost:27017/plan_db"; // <-- IMPORTANT: Update this
-const dbName = "plan_db"; // <-- IMPORTANT: Update this
+const mongoUrl = "mongodb://localhost:27017/plan_db";
+const dbName = "plan_db";
 const collectionName = "counties";
 
 // --- File Paths ---
@@ -42,7 +40,7 @@ async function uploadCounties() {
         // Create a new document, mapping only the fields defined in your countyModel.js
         // Extra fields like 'rating_area_count' and 'service_area_count' are ignored.
         const county = {
-          county_id: parseInt(row.id, 10), // Use CSV id as MongoDB _id
+          county_id: row.id, // Use CSV id as MongoDB _id
           name: row.name,
           state_id: row.state_id,
         };

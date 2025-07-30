@@ -59,8 +59,9 @@ async function uploadPlanPricesWithBatching() {
                 age: age,
                 is_tobacco_user: is_tobacco_user,
                 price: priceValue,
+                rating_area_id: row.rating_area_id,
                 effective_date: new Date(row.effective_date),
-                expiry_date: new Date(row.expiry_date),
+                expiry_date: new Date(row.expiration_date),
               });
 
               // When the batch is full, insert it into the database

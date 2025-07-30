@@ -35,7 +35,7 @@ async function uploadIssuers() {
       .pipe(csv())
       .on("data", (row) => {
         const issuer = {
-          issuer_id: parseInt(row.id, 10),
+          issuer_id: row.id,
           name: row.name,
           alternate_name: row.alternate_name,
           logo_path: row.logo_path,
