@@ -1,112 +1,120 @@
-// upload_plan_prices_mongo.js
+// upload_plan_prices_batched.js
 
 const fs = require("fs");
 const path = require("path");
 const csv = require("csv-parser");
 const { MongoClient } = require("mongodb");
 
-// --- Model (for reference) ---
-// const PlanPrice = require('./models/planPriceModel');
-
 // --- Connection Details ---
-const mongoUrl = "mongodb://localhost:27017/plan_db"; // <-- IMPORTANT: Update this
-const dbName = "plan_db"; // <-- IMPORTANT: Update this
+const mongoUrl = "mongodb://localhost:27017/plan_db"; // Your MongoDB connection string
+const dbName = "plan_db"; // Your database name
 const collectionName = "planprices";
 
 // --- File Paths ---
 const pricingsCsvPath = path.resolve(__dirname, "../csv_files/pricings.csv");
 
-async function uploadPlanPrices() {
+async function uploadPlanPricesWithBatching() {
   const client = new MongoClient(mongoUrl, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
 
+  const BATCH_SIZE = 10000; // Process 10,000 documents at a time. You can adjust this number.
+  let batch = [];
+  let totalInserted = 0;
+
   try {
-    // 1. Connect to MongoDB.
     await client.connect();
     console.log("Connected successfully to MongoDB");
     const db = client.db(dbName);
     const collection = db.collection(collectionName);
 
-    // 2. Clear previous data from the collection.
     await collection.deleteMany({});
     console.log(`Cleared existing data from "${collectionName}" collection.`);
 
-    const documentsToInsert = [];
+    console.log("Reading and processing pricings.csv with batching...");
+    const stream = fs.createReadStream(pricingsCsvPath);
 
-    // 3. Read and process the pricings.csv file.
-    console.log("Reading and processing pricings.csv...");
-    fs.createReadStream(pricingsCsvPath)
-      .pipe(csv())
-      .on("data", (row) => {
-        // Extract plan_id and dates directly from the row.
-        const plan_id = row.plan_id;
-        const effective_date = row.effective_date;
-        const expiry_date = row.expiry_date;
+    // Create a promise to wait for the stream processing to complete
+    const streamPromise = new Promise((resolve, reject) => {
+      stream
+        .pipe(csv())
+        .on("data", async (row) => {
+          const plan_id = row.plan_id;
+          if (!plan_id) return; // Skip rows without a plan_id
 
-        if (!plan_id) {
-          console.warn("Skipping a row due to missing plan_id.");
-          return;
-        }
+          // Iterate over each column in the row to find age-based prices.
+          for (const key in row) {
+            if (key.startsWith("age_")) {
+              const priceValue = parseFloat(row[key]);
+              if (!priceValue) continue; // Skip if there's no valid price.
 
-        // Iterate over each column in the row to find age-based prices.
-        for (const key in row) {
-          // Target columns that start with 'age_'
-          if (key.startsWith("age_")) {
-            const priceValue = parseFloat(row[key]);
+              const parts = key.split("_");
+              const age = parseInt(parts[1], 10);
+              const is_tobacco_user =
+                parts.length > 2 && parts[2] === "tobacco";
 
-            // Skip if there's no valid price.
-            if (!priceValue) {
-              continue;
+              batch.push({
+                plan_id: plan_id,
+                age: age,
+                is_tobacco_user: is_tobacco_user,
+                price: priceValue,
+                effective_date: new Date(row.effective_date),
+                expiry_date: new Date(row.expiry_date),
+              });
+
+              // When the batch is full, insert it into the database
+              if (batch.length === BATCH_SIZE) {
+                stream.pause(); // Pause the read stream to prevent memory overload
+                try {
+                  const result = await collection.insertMany(batch, {
+                    ordered: false,
+                  });
+                  totalInserted += result.insertedCount;
+                  console.log(
+                    `Inserted a batch of ${result.insertedCount} documents. Total: ${totalInserted}`
+                  );
+                  batch = []; // Clear the batch for the next set of documents
+                } catch (dbError) {
+                  console.error("Database batch insert error:", dbError);
+                }
+                stream.resume(); // Resume the read stream
+              }
             }
-
-            // Parse age and tobacco status from the column header (e.g., 'age_21_tobacco').
-            const parts = key.split("_");
-            const age = parseInt(parts[1], 10);
-            const is_tobacco_user = parts.length > 2 && parts[2] === "tobacco";
-
-            // Create a new document for each individual price point.
-            const priceDocument = {
-              plan_id: plan_id,
-              age: age,
-              is_tobacco_user: is_tobacco_user,
-              price: priceValue,
-              effective_date: new Date(effective_date),
-              expiry_date: new Date(expiry_date),
-            };
-            documentsToInsert.push(priceDocument);
           }
-        }
-      })
-      .on("end", async () => {
-        // 4. Insert the prepared documents into the database.
-        if (documentsToInsert.length > 0) {
-          console.log(
-            `Preparing to insert ${documentsToInsert.length} documents...`
-          );
-          // Using insertMany is highly efficient for large numbers of documents.
-          const result = await collection.insertMany(documentsToInsert, {
-            ordered: false,
-          });
-          console.log(
-            `${result.insertedCount} documents were successfully inserted.`
-          );
-        } else {
-          console.log("No documents were prepared for insertion.");
-        }
+        })
+        .on("end", async () => {
+          // Insert any remaining documents in the last batch
+          if (batch.length > 0) {
+            try {
+              const result = await collection.insertMany(batch, {
+                ordered: false,
+              });
+              totalInserted += result.insertedCount;
+              console.log(
+                `Inserted the final batch of ${result.insertedCount} documents. Total: ${totalInserted}`
+              );
+            } catch (dbError) {
+              console.error("Database final batch insert error:", dbError);
+            }
+          }
+          resolve(); // Resolve the promise when the stream ends
+        })
+        .on("error", (streamError) => {
+          reject(streamError); // Reject the promise on a stream error
+        });
+    });
 
-        // 5. Close the database connection.
-        await client.close();
-        console.log("MongoDB connection closed.");
-      });
+    await streamPromise; // Wait for the entire process to finish
   } catch (err) {
     console.error("An error occurred during the upload process:", err);
-    // Ensure the client is closed on error
+  } finally {
+    // Ensure the client connection is closed
     if (client && client.topology && client.topology.isConnected()) {
       await client.close();
+      console.log("MongoDB connection closed.");
     }
   }
 }
 
-uploadPlanPrices();
+uploadPlanPricesWithBatching();

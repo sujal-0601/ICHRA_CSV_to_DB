@@ -1,6 +1,4 @@
 // upload_service_areas_mongo.js
-
-const fs = require("fs");
 const path = require("path");
 const csv = require("csv-parser");
 const { MongoClient } = require("mongodb");
@@ -9,12 +7,12 @@ const { MongoClient } = require("mongodb");
 // const ServiceArea = require('./models/serviceAreaModel');
 
 // --- Connection Details ---
-const mongoUrl = "mongodb://localhost:27017/your_database_name"; // <-- IMPORTANT: Update this
-const dbName = "your_database_name"; // <-- IMPORTANT: Update this
+const mongoUrl = "mongodb://localhost:27017/plan_db"; // <-- IMPORTANT: Update this
+const dbName = "plan_db"; // <-- IMPORTANT: Update this
 const collectionName = "serviceareas";
 
 // --- File Paths ---
-const csvPath = path.resolve(__dirname, "service_areas.csv");
+const csvPath = path.resolve(__dirname, "../csv_files/service_areas.csv");
 
 async function uploadServiceAreas() {
   const client = new MongoClient(mongoUrl, {
@@ -40,9 +38,8 @@ async function uploadServiceAreas() {
       .on("data", (row) => {
         // Map the CSV row to the ServiceArea model structure
         const serviceArea = {
-          _id: row.id, // Use the CSV 'id' as the MongoDB '_id'
-          issuer_id: parseInt(row.issuer_id, 10),
-          name: row.name,
+          service_area_id: row.id, // Use the CSV 'id' as the MongoDB '_id'
+          issuer_id: row.issuer_id,
         };
         areasToInsert.push(serviceArea);
       })
